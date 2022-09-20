@@ -168,7 +168,7 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     }
 
     // Wait for upload to complete
-    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => 'uploadComplete')
+    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => sleep(500).then(() => 'uploadComplete'))
 
     // Check if daily upload limit is reached
     const dailyUploadPromise = page.waitForXPath('//*[contains(text(),"Daily upload limit reached")]', { timeout: 0 }).then(() => 'dailyUploadReached');
