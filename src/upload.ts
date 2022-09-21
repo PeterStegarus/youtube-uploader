@@ -436,19 +436,32 @@ const publishComment = async (comment: Comment) => {
         await page.click('#submit-button')
 
         if(comment.pin) {
-            // Comment - dropdown action menu
-            const [actionMenu] = await page.$x('//div[@id="primary"]//ytd-comment-thread-renderer[contains(., "0 seconds ago")]//button[@id="button" and @aria-label="Action menu"]');
-            await actionMenu.click();
-            const [pinButton] = await page.$x('//yt-formatted-string[contains(@class, "ytd-menu-navigation-item-renderer") and contains(., "Pin")]');
-            await pinButton.click();
-            const [confirmPinButton] = await page.$x('//yt-formatted-string[contains(@class, "yt-button-renderer") and contains(., "Pin")]');
-            await confirmPinButton.click();
+            await pinComment(cmt);
         }
 
         return { err: false, data: 'sucess' }
     } catch (err) {
         return { err: true, data: err }
     }
+}
+
+const pinComment = async (comment: String) => {
+    const actionMenuXPath = `//div[@id="primary"]//ytd-comment-thread-renderer[contains(., "${comment}")]//button[@id="button" and @aria-label="Action menu"]`;
+    const pinButtonXPath = '//yt-formatted-string[contains(@class, "ytd-menu-navigation-item-renderer") and contains(., "Pin")]';
+    const confirmPinButtonXPath = '//div[@id="main" and contains(., "Pin this comment?")]//a[contains(., "Pin")]]';
+    // const confirmPinButtonXPath = '//yt-formatted-string[contains(@class, "yt-button-renderer") and contains(., "Pin")]';
+    
+    await page.waitForXPath(actionMenuXPath);
+    const [actionMenu] = await page.$x(actionMenuXPath);
+    await actionMenu.evaluate(x => (x as HTMLElement).click());
+
+    await page.waitForXPath(pinButtonXPath);
+    const [pinButton] = await page.$x(pinButtonXPath);
+    await pinButton.click();
+
+    await page.waitForXPath(confirmPinButtonXPath);
+    const [confirmPinButton] = await page.$x(confirmPinButtonXPath);
+    await confirmPinButton.click();
 }
 
 const publishLiveComment = async (comment: Comment, messageTransport: MessageTransport) => {
