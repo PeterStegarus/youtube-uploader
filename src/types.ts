@@ -50,6 +50,7 @@ export interface Comment {
     link: string
     comment: string
     live?: boolean
+    pin?: boolean
     onSuccess?: Function
 }
 

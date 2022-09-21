@@ -168,7 +168,7 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     }
 
     // Wait for upload to complete
-    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => sleep(500).then(() => 'uploadComplete'))
+    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => sleep(2000).then(() => 'uploadComplete'))
 
     // Check if daily upload limit is reached
     const dailyUploadPromise = page.waitForXPath('//*[contains(text(),"Daily upload limit reached")]', { timeout: 0 }).then(() => 'dailyUploadReached');
@@ -420,7 +420,7 @@ export const comment = async (
 const publishComment = async (comment: Comment) => {
     const videoUrl = comment.link
     if (!videoUrl) {
-        throw new Error('The link of the  video is a required parameter')
+        throw new Error('The link of the video is a required parameter')
     }
     try {
         const cmt = comment.comment
@@ -434,6 +434,17 @@ const publishComment = async (comment: Comment) => {
         await commentBox[0].click()
         await commentBox[0].type(cmt.substring(0, 10000))
         await page.click('#submit-button')
+
+        if(comment.pin) {
+            // Comment - dropdown action menu
+            const [actionMenu] = await page.$x('//div[@id="primary"]//ytd-comment-thread-renderer[contains(., "0 seconds ago")]//button[@id="button" and @aria-label="Action menu"]');
+            await actionMenu.click();
+            const [pinButton] = await page.$x('//yt-formatted-string[contains(@class, "ytd-menu-navigation-item-renderer") and contains(., "Pin")]');
+            await pinButton.click();
+            const [confirmPinButton] = await page.$x('//yt-formatted-string[contains(@class, "yt-button-renderer") and contains(., "Pin")]');
+            await confirmPinButton.click();
+        }
+
         return { err: false, data: 'sucess' }
     } catch (err) {
         return { err: true, data: err }
@@ -444,7 +455,7 @@ const publishLiveComment = async (comment: Comment, messageTransport: MessageTra
     const videoUrl = comment.link
     const cmt = comment.comment
     if (!videoUrl) {
-        throw new Error('The link of the  video is a required parameter')
+        throw new Error('The link of the video is a required parameter')
     }
     await page.goto(videoUrl)
     await sleep(3000)
