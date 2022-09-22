@@ -168,15 +168,18 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     }
 
     // Wait for upload to complete
-    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => sleep(2000).then(() => 'uploadComplete'))
+    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => sleep(2000).then(() => 'Upload complete'))
 
     // Check if daily upload limit is reached
-    const dailyUploadPromise = page.waitForXPath('//*[contains(text(),"Daily upload limit reached")]', { timeout: 0 }).then(() => 'dailyUploadReached');
+    const dailyUploadPromise = page.waitForXPath('//*[contains(text(),"Daily upload limit reached")]', { timeout: 0 }).then(() => 'Daily upload limit reached');
 
-    const uploadResult = await Promise.any([uploadCompletePromise, dailyUploadPromise])
-    if (uploadResult === 'dailyUploadReached') {
+    // Check if daily upload limit is reached
+    const processingAbandonedPromise = page.waitForXPath('//*[contains(text(),"Processing abandoned")]', { timeout: 0 }).then(() => 'Processing abandoned');
+
+    const uploadResult = await Promise.any([dailyUploadPromise, processingAbandonedPromise, uploadCompletePromise])
+    if (uploadResult !== 'Upload complete') {
         await browser.close();
-        throw new Error('Daily upload limit reached');
+        throw new Error(uploadResult);
     }
 
     // Wait for upload to go away and processing to start, skip the wait if the user doesn't want it.
@@ -398,6 +401,7 @@ export const comment = async (
 
     await launchBrowser(puppeteerLaunch)
     if (!fs.existsSync(cookiesFilePath)) await loadAccount(credentials, messageTransport)
+    await changeHomePageLangIfNeeded(page);
     const commentsS = []
 
     for (const comment of comments) {
@@ -446,10 +450,9 @@ const publishComment = async (comment: Comment) => {
 }
 
 const pinComment = async (comment: String) => {
-    const actionMenuXPath = `//div[@id="primary"]//ytd-comment-thread-renderer[contains(., "${comment}")]//button[@id="button" and @aria-label="Action menu"]`;
+    const actionMenuXPath = `//div[@id="primary"]//div[@id="body" and contains(., "${comment}")]//button[@id="button" and @aria-label="Action menu"]`;
     const pinButtonXPath = '//yt-formatted-string[contains(@class, "ytd-menu-navigation-item-renderer") and contains(., "Pin")]';
-    const confirmPinButtonXPath = '//div[@id="main" and contains(., "Pin this comment?")]//a[contains(., "Pin")]]';
-    // const confirmPinButtonXPath = '//yt-formatted-string[contains(@class, "yt-button-renderer") and contains(., "Pin")]';
+    const confirmPinButtonXPath = '//div[@id="main" and contains(., "Pin this comment?")]//button[contains(., "Pin")]';
     
     await page.waitForXPath(actionMenuXPath);
     const [actionMenu] = await page.$x(actionMenuXPath);
@@ -461,7 +464,7 @@ const pinComment = async (comment: String) => {
 
     await page.waitForXPath(confirmPinButtonXPath);
     const [confirmPinButton] = await page.$x(confirmPinButtonXPath);
-    await confirmPinButton.click();
+    await confirmPinButton.evaluate(x => (x as HTMLElement).click());
 }
 
 const publishLiveComment = async (comment: Comment, messageTransport: MessageTransport) => {
