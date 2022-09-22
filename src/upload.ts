@@ -103,21 +103,28 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     const createBtnXPath = '//*[@id="create-icon"]/tp-yt-iron-icon'
     const addVideoBtnXPath = '//*[@id="text-item-0"]/ytcp-ve/div/div/yt-formatted-string'
 
-    // youtube.com/upload usually loads with the upload modal already open. But if that's not the case, try to open it
-    try {
-        await page.waitForXPath(createBtnXPath)
-        const [createBtn] = await page.$x(createBtnXPath);
-        await createBtn.click();
-        const [addVideoBtn] = await page.$x(addVideoBtnXPath);
-        await addVideoBtn.click();
-    } catch (_) { }
+    for (let i = 0; i < 2; i++) {
+        // youtube.com/upload usually loads with the upload modal already open. But if that's not the case, try to open it
+        try {
+            await page.waitForXPath(createBtnXPath)
+            const [createBtn] = await page.$x(createBtnXPath);
+            await createBtn.click();
+            const [addVideoBtn] = await page.$x(addVideoBtnXPath);
+            await addVideoBtn.click();
+        } catch (_) { }
 
-    try {
-        await page.waitForXPath(selectBtnXPath)
-        await page.waitForXPath(closeBtnXPath)
-    } catch (error) {
-        messageTransport.log('Failed to find the select files button')
-        messageTransport.log(error)
+        try {
+            await page.waitForXPath(selectBtnXPath)
+            await page.waitForXPath(closeBtnXPath)
+            break
+        } catch (error) {
+            messageTransport.log('Failed to find the select files button')
+            messageTransport.log(error)
+            await page.evaluate(() => {
+                window.onbeforeunload = null
+            })
+            await page.goto(uploadURL)
+        }
     }
 
     // Remove hidden closebtn text
@@ -176,7 +183,7 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
         uploadCompletePromise = sleep(5000).then(() => 'Upload complete');
     } else {
         uploadCompletePromise = page.waitForXPath('//*[contains(text(), "Upload complete")]', { timeout: 0 })
-            .then(() => page.waitForXPath('//*[contains(text(), "Processing") and not(contains(text(), "Upload complete"))]', { timeout: 0 }))
+            .then(() => page.waitForXPath('//*[contains(text(), "Processing") and not(contains(text(), "Processing will begin shortly"))]', { timeout: 0 }))
             .then(() => 'Upload complete');
     }
 
