@@ -102,29 +102,24 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     const saveCloseBtnXPath = '//*[@aria-label="Save and close"]/tp-yt-iron-icon'
     const createBtnXPath = '//*[@id="create-icon"]/tp-yt-iron-icon'
     const addVideoBtnXPath = '//*[@id="text-item-0"]/ytcp-ve/div/div/yt-formatted-string'
-    if ((await page.waitForXPath(createBtnXPath).catch(() => null))) {
-        const createBtn = await page.$x(createBtnXPath);
-        await createBtn[0].click();
+
+    // youtube.com/upload usually loads with the upload modal already open. But if that's not the case, try to open it
+    try {
+        await page.waitForXPath(createBtnXPath)
+        const [createBtn] = await page.$x(createBtnXPath);
+        await createBtn.click();
+        const [addVideoBtn] = await page.$x(addVideoBtnXPath);
+        await addVideoBtn.click();
+    } catch (_) { }
+
+    try {
+        await page.waitForXPath(selectBtnXPath)
+        await page.waitForXPath(closeBtnXPath)
+    } catch (error) {
+        messageTransport.log('Failed to find the select files button')
+        messageTransport.log(error)
     }
-    if ((await page.waitForXPath(addVideoBtnXPath).catch(() => null))) {
-        const addVideoBtn = await page.$x(addVideoBtnXPath);
-        await addVideoBtn[0].click();
-    }
-    for (let i = 0; i < 2; i++) {
-        try {
-            await page.waitForXPath(selectBtnXPath)
-            await page.waitForXPath(closeBtnXPath)
-            break
-        } catch (error) {
-            const nextText = i === 0 ? ' trying again' : ' failed again'
-            messageTransport.log('Failed to find the select files button' + nextText)
-            messageTransport.log(error)
-            await page.evaluate(() => {
-                window.onbeforeunload = null
-            })
-            await page.goto(uploadURL)
-        }
-    }
+
     // Remove hidden closebtn text
     const closeBtn = await page.$x(closeBtnXPath)
     await page.evaluate((el) => {
@@ -168,25 +163,27 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     }
 
     // Wait for upload to complete
-    const uploadCompletePromise = page.waitForXPath('//*[contains(text(),"Upload complete")]', { timeout: 0 }).then(() => sleep(2000).then(() => 'Upload complete'))
+    let uploadCompletePromise;
 
     // Check if daily upload limit is reached
-    const dailyUploadPromise = page.waitForXPath('//*[contains(text(),"Daily upload limit reached")]', { timeout: 0 }).then(() => 'Daily upload limit reached');
+    const dailyUploadPromise = page.waitForXPath('//*[contains(text(), "Daily upload limit reached")]', { timeout: 0 }).then(() => 'Daily upload limit reached');
 
     // Check if daily upload limit is reached
-    const processingAbandonedPromise = page.waitForXPath('//*[contains(text(),"Processing abandoned")]', { timeout: 0 }).then(() => 'Processing abandoned');
+    const processingAbandonedPromise = page.waitForXPath('//*[contains(text(), "Processing abandoned")]', { timeout: 0 }).then(() => 'Processing abandoned');
+
+    // Wait for upload to go away and processing to start, skip the wait if the user doesn't want it.
+    if (videoJSON.skipProcessingWait) {
+        uploadCompletePromise = sleep(5000).then(() => 'Upload complete');
+    } else {
+        uploadCompletePromise = page.waitForXPath('//*[contains(text(), "Upload complete")]', { timeout: 0 })
+            .then(() => page.waitForXPath('//*[contains(text(), "Processing") and not(contains(text(), "Upload complete"))]', { timeout: 0 }))
+            .then(() => 'Upload complete');
+    }
 
     const uploadResult = await Promise.any([dailyUploadPromise, processingAbandonedPromise, uploadCompletePromise])
     if (uploadResult !== 'Upload complete') {
         await browser.close();
         throw new Error(uploadResult);
-    }
-
-    // Wait for upload to go away and processing to start, skip the wait if the user doesn't want it.
-    if (!videoJSON.skipProcessingWait) {
-        await page.waitForXPath('//*[contains(text(),"Upload complete")]', { hidden: true, timeout: 0 })
-    } else {
-        await sleep(5000)
     }
 
     if (videoJSON.onProgress) {
