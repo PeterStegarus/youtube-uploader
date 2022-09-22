@@ -20,7 +20,7 @@ let browser: Browser, page: Page
 let cookiesDirPath: string
 let cookiesFilePath: string
 
-const invalidCharacters = [ '<', '>' ]
+const invalidCharacters = ['<', '>']
 
 const uploadURL = 'https://www.youtube.com/upload'
 const homePageURL = 'https://www.youtube.com'
@@ -81,7 +81,7 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
             throw new Error(`"${videoJSON.title}" includes a character not allowed in youtube titles (${invalidCharacters[i]})`)
 
     if (videoJSON.channelName) {
-      await changeChannel(videoJSON.channelName);
+        await changeChannel(videoJSON.channelName);
     }
 
     const title = videoJSON.title
@@ -102,14 +102,14 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
     const saveCloseBtnXPath = '//*[@aria-label="Save and close"]/tp-yt-iron-icon'
     const createBtnXPath = '//*[@id="create-icon"]/tp-yt-iron-icon'
     const addVideoBtnXPath = '//*[@id="text-item-0"]/ytcp-ve/div/div/yt-formatted-string'
-        if((await page.waitForXPath(createBtnXPath).catch(() => null))){
-            const createBtn = await page.$x(createBtnXPath);
-            await createBtn[0].click();
-        }
-        if((await page.waitForXPath(addVideoBtnXPath).catch(() => null))){
-            const addVideoBtn =await page.$x(addVideoBtnXPath);
-            await addVideoBtn[0].click();
-        }
+    if ((await page.waitForXPath(createBtnXPath).catch(() => null))) {
+        const createBtn = await page.$x(createBtnXPath);
+        await createBtn[0].click();
+    }
+    if ((await page.waitForXPath(addVideoBtnXPath).catch(() => null))) {
+        const addVideoBtn = await page.$x(addVideoBtnXPath);
+        await addVideoBtn[0].click();
+    }
     for (let i = 0; i < 2; i++) {
         try {
             await page.waitForXPath(selectBtnXPath)
@@ -154,7 +154,7 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
             if (progressChecker == undefined || !curProgress) return
             curProgress = curProgress.split(" ").find((txt: string) => txt.indexOf("%") != -1)
             let newProgress = curProgress ? parseInt(curProgress.slice(0, -1)) : 0
-            if ( progress.progress == newProgress ) return
+            if (progress.progress == newProgress) return
             progress.progress = newProgress
             videoJSON.onProgress!(progress)
         }, 500)
@@ -281,8 +281,8 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
         // translate(text(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')
         const langName = await page.$x(
             '//*[normalize-space(translate(text(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"))=\'' +
-                videoLang.toLowerCase() +
-                "']"
+            videoLang.toLowerCase() +
+            "']"
         )
         await page.evaluate((el) => el.click(), langName[langName.length - 1])
     }
@@ -323,7 +323,7 @@ async function uploadVideo(videoJSON: Video, messageTransport: MessageTransport)
         uploadedLink = await page.evaluate((e) => e.getAttribute('href'), uploadedLinkHandle)
     } while (uploadedLink === videoBaseLink || uploadedLink === shortVideoBaseLink)
 
-    const closeDialogXPath = uploadAsDraft ? saveCloseBtnXPath : publishXPath    
+    const closeDialogXPath = uploadAsDraft ? saveCloseBtnXPath : publishXPath
     let closeDialog
     for (let i = 0; i < 10; i++) {
         try {
@@ -439,7 +439,7 @@ const publishComment = async (comment: Comment) => {
         await commentBox[0].type(cmt.substring(0, 10000))
         await page.click('#submit-button')
 
-        if(comment.pin) {
+        if (comment.pin) {
             await pinComment(cmt);
         }
 
@@ -452,8 +452,8 @@ const publishComment = async (comment: Comment) => {
 const pinComment = async (comment: String) => {
     const actionMenuXPath = `//div[@id="primary"]//div[@id="body" and contains(., "${comment}")]//button[@id="button" and @aria-label="Action menu"]`;
     const pinButtonXPath = '//yt-formatted-string[contains(@class, "ytd-menu-navigation-item-renderer") and contains(., "Pin")]';
-    const confirmPinButtonXPath = '//div[@id="main" and contains(., "Pin this comment?")]//button[contains(., "Pin")]';
-    
+    const confirmPinButtonXPath = '//div[@id="main" and contains(., "Pin this comment?")]//*[(self::button or self::a) and contains(., "Pin")]';
+
     await page.waitForXPath(actionMenuXPath);
     const [actionMenu] = await page.$x(actionMenuXPath);
     await actionMenu.evaluate(x => (x as HTMLElement).click());
@@ -622,8 +622,8 @@ const updateVideoInfo = async (videoJSON: VideoToEdit, messageTransport: Message
         await page.evaluate((el) => el.click(), langHandler[0])
         const langName = await page.$x(
             '//*[normalize-space(translate(text(),"ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz"))=\'' +
-                videoLang.toLowerCase() +
-                "']"
+            videoLang.toLowerCase() +
+            "']"
         )
         await page.evaluate((el) => el.click(), langName[langName.length - 1])
     }
@@ -870,7 +870,7 @@ async function login(localPage: Page, credentials: Credentials, messageTransport
         await localPage.waitForSelector(passwordInputSelector)
         await localPage.waitForTimeout(3000)
         await localPage.type(passwordInputSelector, credentials.pass, { delay: 50 })
-    
+
         await localPage.keyboard.press('Enter')
     }
 
@@ -1006,23 +1006,23 @@ async function scrollTillVeiw(page: Page, element: string) {
 }
 
 async function changeChannel(channelName: string) {
-  await page.goto("https://www.youtube.com/channel_switcher");
+    await page.goto("https://www.youtube.com/channel_switcher");
 
-  const channelNameXPath =
-    `//*[normalize-space(text())='${channelName}']`;
-  const element = await page.waitForXPath(channelNameXPath);
+    const channelNameXPath =
+        `//*[normalize-space(text())='${channelName}']`;
+    const element = await page.waitForXPath(channelNameXPath);
 
-  await element!.click()
+    await element!.click()
 
-  await page.waitForNavigation({
-    waitUntil: "networkidle0"
-  });
+    await page.waitForNavigation({
+        waitUntil: "networkidle0"
+    });
 }
 
 function escapeQuotesForXPath(str: string) {
     // If the value contains only single or double quotes, construct
     // an XPath literal
-    if (!str.includes('"')){
+    if (!str.includes('"')) {
         return '"' + str + '"';
     }
     if (!str.includes("'")) {
@@ -1034,7 +1034,7 @@ function escapeQuotesForXPath(str: string) {
     //
     //    concat("foo",'"',"bar")
 
-    const parts : string[] = [];
+    const parts: string[] = [];
     // First, put a '"' after each component in the string.
     for (const part of str.split('"')) {
         if (part.length > 0) {
@@ -1042,23 +1042,23 @@ function escapeQuotesForXPath(str: string) {
         }
         parts.push("'\"'");
     }
-     // Then remove the extra '"' after the last component.
+    // Then remove the extra '"' after the last component.
     parts.pop();
     // Finally, put it together into a concat() function call.
-    
+
     return "concat(" + parts.join(",") + ")";
 }
 
-function xpathTextSelector( text: string, caseSensitive?: boolean, nthElement?: number ){
+function xpathTextSelector(text: string, caseSensitive?: boolean, nthElement?: number) {
     let xpathSelector = ''
-    if(caseSensitive)
-    xpathSelector = `//*[contains(normalize-space(text()),"${text}")]`
-    else{
-    let uniqueText = [...new Set(text.split(''))].join('')
-    xpathSelector = `//*[contains(translate(normalize-space(text()),'${uniqueText.toUpperCase()}','${uniqueText.toLowerCase()}'),"${text.toLowerCase().replace(/\s\s+/g, " ")}")]`
+    if (caseSensitive)
+        xpathSelector = `//*[contains(normalize-space(text()),"${text}")]`
+    else {
+        let uniqueText = [...new Set(text.split(''))].join('')
+        xpathSelector = `//*[contains(translate(normalize-space(text()),'${uniqueText.toUpperCase()}','${uniqueText.toLowerCase()}'),"${text.toLowerCase().replace(/\s\s+/g, " ")}")]`
     }
-    if(nthElement)
-    xpathSelector = `(${xpathSelector})[${nthElement+1}]`
-    
+    if (nthElement)
+        xpathSelector = `(${xpathSelector})[${nthElement + 1}]`
+
     return xpathSelector
-    }
+}
